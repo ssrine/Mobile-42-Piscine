@@ -1,12 +1,12 @@
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, SafeAreaView, Dimensions, ScrollView } from 'react-native';
 import { useState } from 'react';
 
 export default function App() {
   const [expression, setExpression] = useState('0');
   const [result, setResult] = useState('0');
-  const { width, height } = Dimensions.get('window');
-  const isPortrait = height >= width;
-  const buttonSize = isPortrait ? width / 5 : width / 7;
+  const { width } = Dimensions.get('window');
+
+  const buttonSize = (width - 40) / 4;
 
   const handleButtonPress = (value) => {
     console.log(value);
@@ -38,91 +38,102 @@ export default function App() {
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
       {/* AppBar */}
       <View style={{
-        backgroundColor: '#2c3e50',
-        paddingTop: 20,
-        paddingBottom: 10,
-        paddingHorizontal: 15,
+        backgroundColor: '#333',
+        paddingTop: 30,
+        paddingBottom: 30,
+        paddingHorizontal: 10,
         justifyContent: 'center',
         alignItems: 'center',
+        minHeight: 110,
       }}>
-        <Text style={{ color: 'white', fontSize: 24, fontWeight: 'bold' }}>
+        <Text style={{ color: '#fff', fontSize: 32, fontWeight: 'bold' }}>
           Calculator
         </Text>
       </View>
 
-      {/* Display TextFields */}
-      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 15, paddingVertical: 20, justifyContent: 'flex-start' }}>
-        <View style={{ marginBottom: 15 }}>
-          <Text style={{ fontSize: 14, color: '#666', marginBottom: 5 }}>Expression</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+        {/* Display Section */}
+        <View style={{ paddingHorizontal: 10, paddingVertical: 15 }}>
+          <Text style={{ fontSize: 12, color: '#666', marginBottom: 5 }}>
+            Expression
+          </Text>
           <TextInput
             style={{
               borderWidth: 1,
-              borderColor: '#ddd',
-              borderRadius: 5,
-              padding: 15,
+              borderColor: '#ccc',
+              borderRadius: 4,
+              padding: 10,
               fontSize: 16,
-              backgroundColor: 'white',
-              color: '#333',
+              marginBottom: 15,
+              color: '#000',
+              backgroundColor: '#f9f9f9',
             }}
             value={expression}
             editable={false}
           />
-        </View>
 
-        <View style={{ marginBottom: 20 }}>
-          <Text style={{ fontSize: 14, color: '#666', marginBottom: 5 }}>Result</Text>
+          <Text style={{ fontSize: 12, color: '#666', marginBottom: 5 }}>
+            Result
+          </Text>
           <TextInput
             style={{
               borderWidth: 1,
-              borderColor: '#ddd',
-              borderRadius: 5,
-              padding: 15,
+              borderColor: '#ccc',
+              borderRadius: 4,
+              padding: 10,
               fontSize: 16,
-              backgroundColor: 'white',
-              color: '#333',
+              marginBottom: 20,
+              color: '#000',
+              backgroundColor: '#f9f9f9',
             }}
             value={result}
             editable={false}
           />
         </View>
 
-        {/* Calculator Buttons Grid */}
-        <View style={{ flex: 1, justifyContent: 'flex-start' }}>
+        {/* Buttons Grid */}
+        <ScrollView style={{ paddingHorizontal: 5 }} showsVerticalScrollIndicator={false}>
           {buttons.map((row, rowIndex) => (
             <View
               key={rowIndex}
               style={{
                 flexDirection: 'row',
-                justifyContent: 'space-between',
-                marginBottom: 10,
+                justifyContent: 'center',
+                marginBottom: 8,
               }}
             >
-              {row.map((btn) => (
-                <TouchableOpacity
-                  key={btn}
-                  onPress={() => handleButtonPress(btn)}
-                  style={{
-                    width: btn === '0' ? buttonSize * 2 + 10 : buttonSize,
-                    height: buttonSize,
-                    backgroundColor: ['AC', 'C'].includes(btn) ? '#e74c3c' : ['/', '*', '+', '-', '='].includes(btn) ? '#f39c12' : '#3498db',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    borderRadius: 8,
-                    marginRight: btn === '.' ? 10 : 0,
-                  }}
-                >
-                  <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>
-                    {btn}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {row.map((btn) => {
+                let bgColor = '#3498db';
+                if (['AC', 'C'].includes(btn)) bgColor = '#e74c3c';
+                if (['/', '*', '+', '-', '='].includes(btn)) bgColor = '#f39c12';
+
+                return (
+                  <TouchableOpacity
+                    key={btn}
+                    onPress={() => handleButtonPress(btn)}
+                    style={{
+                      width: btn === '0' ? buttonSize * 2 + 8 : buttonSize,
+                      height: buttonSize,
+                      backgroundColor: bgColor,
+                      borderRadius: 4,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginHorizontal: 4,
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>
+                      {btn}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           ))}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
