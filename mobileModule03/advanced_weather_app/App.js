@@ -579,6 +579,7 @@ export default function App() {
       style={styles.backgroundImage}
       resizeMode="cover"
     >
+      <View style={styles.overlay} />
       <SafeAreaProvider>
         <WeatherApp />
       </SafeAreaProvider>
@@ -591,6 +592,11 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+  },
+
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
   },
 
   root: {
