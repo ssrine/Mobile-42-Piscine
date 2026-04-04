@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Keyboard, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, Keyboard, StyleSheet, Text, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import backgroundImage from './assets/weather-background.png';
 import AppBar from './components/AppBar';
 import CurrentScreen from './screens/CurrentScreen';
 import TodayScreen from './screens/TodayScreen';
@@ -574,20 +574,23 @@ function WeatherApp() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <LinearGradient
-        colors={['#0f2027', '#203a43', '#2c5364']}
-        style={styles.gradient}
-      >
+    <ImageBackground
+      source={backgroundImage}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <SafeAreaProvider>
         <WeatherApp />
-      </LinearGradient>
-    </SafeAreaProvider>
+      </SafeAreaProvider>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
+  backgroundImage: {
     flex: 1,
+    width: '100%',
+    height: '100%',
   },
 
   root: {
