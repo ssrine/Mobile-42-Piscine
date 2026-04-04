@@ -34,50 +34,44 @@ const WEATHER_CODE_MAP = {
   99: 'Thunderstorm with heavy hail',
 };
 
+const WEATHER_ICON_MAP = {
+  0: 'weather-sunny',
+  1: 'weather-sunny',
+  2: 'weather-partly-cloudy',
+  3: 'weather-cloudy',
+  45: 'weather-fog',
+  48: 'weather-fog',
+  51: 'weather-rainy',
+  53: 'weather-rainy',
+  55: 'weather-rainy',
+  56: 'weather-rainy',
+  57: 'weather-rainy',
+  61: 'weather-rainy',
+  63: 'weather-rainy',
+  65: 'weather-pouring',
+  66: 'weather-rainy',
+  67: 'weather-pouring',
+  71: 'weather-snowy',
+  73: 'weather-snowy',
+  75: 'weather-snowy-heavy',
+  77: 'weather-snowy',
+  80: 'weather-rainy',
+  81: 'weather-rainy',
+  82: 'weather-pouring',
+  85: 'weather-snowy-rainy',
+  86: 'weather-snowy-rainy',
+  95: 'weather-lightning-rainy',
+  96: 'weather-lightning-rainy',
+  99: 'weather-lightning-rainy',
+};
+
 const getRegion = (place) => place?.admin1 || place?.admin2 || place?.admin3 || '';
 
 export const getWeatherDescription = (code) =>
   WEATHER_CODE_MAP[code] || 'Unknown weather';
 
-export const getWeatherIconName = (code) => {
-  if (code === 0) {
-    return '☀';
-  }
-
-  if ([1, 2].includes(code)) {
-    return '⛅';
-  }
-
-  if (code === 3) {
-    return '☁';
-  }
-
-  if ([45, 48].includes(code)) {
-    return '🌫';
-  }
-
-  if ([51, 53, 55, 80, 81, 82].includes(code)) {
-    return '🌦';
-  }
-
-  if ([56, 57, 66, 67].includes(code)) {
-    return '🌨';
-  }
-
-  if ([61, 63, 65].includes(code)) {
-    return '🌧';
-  }
-
-  if ([71, 73, 75, 77, 85, 86].includes(code)) {
-    return '❄';
-  }
-
-  if ([95, 96, 99].includes(code)) {
-    return '⛈';
-  }
-
-  return '⛅';
-};
+export const getWeatherIcon = (code) =>
+  WEATHER_ICON_MAP[code] || 'weather-cloudy';
 
 export const formatPlaceLabel = (place) =>
   [place?.name, getRegion(place), place?.country].filter(Boolean).join(', ') ||
@@ -109,7 +103,7 @@ export const getCityFromCoordsAPI = async (lat, lon) => {
   return firstMatch ? shapePlace(firstMatch) : null;
 };
 
-export const searchCitiesAPI = async (text, count = 6) => {
+export const searchCitiesAPI = async (text, count = 5) => {
   const query = text.trim();
 
   if (!query) {
@@ -155,6 +149,7 @@ export const fetchWeatherAPI = async (lat, lon) => {
         windSpeed: data.hourly.windspeed_10m[index],
         weatherCode: data.hourly.weathercode[index],
         weatherDescription: getWeatherDescription(data.hourly.weathercode[index]),
+        weatherIcon: getWeatherIcon(data.hourly.weathercode[index]),
       }))
       .filter((hour) => hour.date === currentDate) || [];
 
@@ -165,6 +160,7 @@ export const fetchWeatherAPI = async (lat, lon) => {
       maxTemperature: data.daily.temperature_2m_max[index],
       weatherCode: data.daily.weathercode[index],
       weatherDescription: getWeatherDescription(data.daily.weathercode[index]),
+      weatherIcon: getWeatherIcon(data.daily.weathercode[index]),
     })) || [];
 
   return {
@@ -174,6 +170,7 @@ export const fetchWeatherAPI = async (lat, lon) => {
           windSpeed: data.current_weather.windspeed,
           weatherCode: data.current_weather.weathercode,
           weatherDescription: getWeatherDescription(data.current_weather.weathercode),
+          weatherIcon: getWeatherIcon(data.current_weather.weathercode),
           time: data.current_weather.time,
         }
       : null,

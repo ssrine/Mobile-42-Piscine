@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ImageBackground, Keyboard, StyleSheet, Text, View } from 'react-native';
-import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { Keyboard, StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import { StatusBar } from 'expo-status-bar';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AppBar from './components/AppBar';
 import CurrentScreen from './screens/CurrentScreen';
 import TodayScreen from './screens/TodayScreen';
@@ -18,30 +19,6 @@ import {
 
 const Tab = createMaterialTopTabNavigator();
 
-const navigationTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: 'transparent',
-    card: 'transparent',
-    text: '#f8fbff',
-    border: 'transparent',
-    primary: '#ffd166',
-  },
-};
-
-const getTabGlyph = (routeName) => {
-  if (routeName === 'Today') {
-    return '◔';
-  }
-
-  if (routeName === 'Weekly') {
-    return '7d';
-  }
-
-  return '☀';
-};
-
 const EMPTY_FORECAST = {
   current: null,
   today: [],
@@ -50,7 +27,7 @@ const EMPTY_FORECAST = {
 
 const ERROR_MESSAGES = {
   permission:
-    "Location access denied. Search for a city manually or use the GPS button after allowing permission.",
+    'Location access denied. Search for a city manually or use the GPS button after allowing permission.',
   invalid: 'Invalid city name. Please enter a valid location.',
   connection: 'Connection issue. Please try again when the weather API is reachable.',
   location: 'Unable to get your GPS location right now.',
@@ -255,6 +232,7 @@ function WeatherApp() {
           if (requestId === weatherRequestIdRef.current) {
             setAppError('geocodingConnection', ERROR_MESSAGES.connection);
           }
+
           return;
         }
 
@@ -281,6 +259,7 @@ function WeatherApp() {
         if (requestId === weatherRequestIdRef.current) {
           setAppError('weatherConnection', ERROR_MESSAGES.connection);
         }
+
         return;
       }
 
@@ -442,7 +421,6 @@ function WeatherApp() {
     let cancelled = false;
     const requestId = suggestionRequestIdRef.current + 1;
     suggestionRequestIdRef.current = requestId;
-
     const timeoutId = setTimeout(async () => {
       setIsSuggestionsLoading(true);
 
@@ -453,7 +431,7 @@ function WeatherApp() {
           return;
         }
 
-        setSuggestions(matches.slice(0, 5));
+        setSuggestions(matches);
         setErrorState((currentError) =>
           currentError.type === 'geocodingConnection'
             ? { type: '', message: '' }
@@ -472,7 +450,7 @@ function WeatherApp() {
           setIsSuggestionsLoading(false);
         }
       }
-    }, 250);
+    }, 300);
 
     return () => {
       cancelled = true;
@@ -482,182 +460,154 @@ function WeatherApp() {
   }, [searchText]);
 
   return (
-    <ImageBackground
-      source={require('./assets/weather-background.png')}
-      style={styles.background}
-      imageStyle={styles.backgroundImage}
-    >
-      <StatusBar style="light" />
-      <View style={styles.overlay} />
+    <View style={styles.root}>
+      <AppBar
+        searchText={searchText}
+        setSearchText={setSearchText}
+        suggestions={suggestions}
+        onSearch={() =>
+          loadWeatherForPlace({
+            query: searchText,
+            nextSearchText: searchText.trim(),
+          })
+        }
+        onSelectSuggestion={(place) =>
+          loadWeatherForPlace({
+            place,
+            nextSearchText: place.label,
+          })
+        }
+        onGeolocation={getLocation}
+        isLoading={loading}
+        isSuggestionsLoading={isSuggestionsLoading}
+      />
 
-      <NavigationContainer theme={navigationTheme}>
-        <View style={styles.container}>
-          <AppBar
-            searchText={searchText}
-            setSearchText={setSearchText}
-            suggestions={suggestions}
-            onSearch={() =>
-              loadWeatherForPlace({
-                query: searchText,
-                nextSearchText: searchText.trim(),
-              })
-            }
-            onSelectSuggestion={(place) =>
-              loadWeatherForPlace({
-                place,
-                nextSearchText: place.label,
-              })
-            }
-            onGeolocation={getLocation}
-            isLoading={loading}
-            isSuggestionsLoading={isSuggestionsLoading}
+      {errorState.message ? (
+        <View style={styles.errorBanner}>
+          <MaterialCommunityIcons
+            name="alert-circle-outline"
+            size={16}
+            color="rgba(255, 180, 180, 0.9)"
           />
-
-          {errorState.message ? (
-            <View style={styles.errorBanner}>
-              <Text style={styles.errorGlyph}>!</Text>
-              <Text style={styles.errorText}>{errorState.message}</Text>
-            </View>
-          ) : null}
-
-          <Tab.Navigator
-            initialRouteName="Current"
-            tabBarPosition="bottom"
-            screenOptions={({ route }) => ({
-              swipeEnabled: true,
-              lazy: true,
-              sceneStyle: {
-                backgroundColor: 'transparent',
-              },
-              tabBarIcon: ({ color }) => {
-                return (
-                  <Text style={[styles.tabIcon, { color }]}>
-                    {getTabGlyph(route.name)}
-                  </Text>
-                );
-              },
-              tabBarStyle: {
-                marginHorizontal: 16,
-                marginBottom: 14 + insets.bottom,
-                borderRadius: 26,
-                backgroundColor: 'rgba(7, 18, 34, 0.82)',
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                overflow: 'hidden',
-                elevation: 0,
-                shadowOpacity: 0,
-              },
-              tabBarIndicatorStyle: {
-                backgroundColor: '#ffd166',
-                height: 3,
-                borderRadius: 999,
-              },
-              tabBarItemStyle: {
-                minHeight: 62,
-              },
-              tabBarLabelStyle: {
-                fontSize: 12,
-                fontWeight: '700',
-              },
-              tabBarActiveTintColor: '#f8fbff',
-              tabBarInactiveTintColor: '#7fa6ca',
-              tabBarPressColor: 'rgba(255,255,255,0.06)',
-              tabBarShowIcon: true,
-            })}
-          >
-            <Tab.Screen name="Current">
-              {() => (
-                <CurrentScreen
-                  current={forecast.current}
-                  location={locationText}
-                  loading={loading}
-                />
-              )}
-            </Tab.Screen>
-            <Tab.Screen name="Today">
-              {() => (
-                <TodayScreen
-                  hourly={forecast.today}
-                  location={locationText}
-                  loading={loading}
-                />
-              )}
-            </Tab.Screen>
-            <Tab.Screen name="Weekly">
-              {() => (
-                <WeeklyScreen
-                  daily={forecast.weekly}
-                  location={locationText}
-                  loading={loading}
-                />
-              )}
-            </Tab.Screen>
-          </Tab.Navigator>
+          <Text style={styles.error}>{errorState.message}</Text>
         </View>
+      ) : null}
+
+      <NavigationContainer>
+        <Tab.Navigator
+          initialRouteName="Current"
+          tabBarPosition="bottom"
+          screenOptions={({ route }) => ({
+            swipeEnabled: true,
+            tabBarIcon: ({ color }) => {
+              let icon = 'cloud';
+
+              if (route.name === 'Current') {
+                icon = 'weather-sunny';
+              }
+              if (route.name === 'Today') {
+                icon = 'calendar-today';
+              }
+              if (route.name === 'Weekly') {
+                icon = 'calendar-week';
+              }
+
+              return (
+                <MaterialCommunityIcons name={icon} size={22} color={color} />
+              );
+            },
+            tabBarActiveTintColor: '#64b4ff',
+            tabBarInactiveTintColor: 'rgba(190, 215, 240, 0.5)',
+            tabBarStyle: {
+              backgroundColor: 'rgba(15, 32, 39, 0.95)',
+              height: 60 + insets.bottom,
+              paddingBottom: insets.bottom,
+              borderTopWidth: 1,
+              borderTopColor: 'rgba(255, 255, 255, 0.08)',
+            },
+            tabBarLabelStyle: {
+              fontSize: 12,
+              fontWeight: '600',
+            },
+            tabBarShowIcon: true,
+            tabBarIndicatorStyle: {
+              backgroundColor: '#64b4ff',
+              top: 0,
+              height: 2,
+            },
+            sceneStyle: { backgroundColor: 'transparent' },
+          })}
+        >
+          <Tab.Screen name="Current">
+            {() => (
+              <CurrentScreen
+                current={forecast.current}
+                location={locationText}
+                coordinates={coordinates}
+                loading={loading}
+              />
+            )}
+          </Tab.Screen>
+          <Tab.Screen name="Today">
+            {() => (
+              <TodayScreen
+                hourly={forecast.today}
+                location={locationText}
+                loading={loading}
+              />
+            )}
+          </Tab.Screen>
+          <Tab.Screen name="Weekly">
+            {() => (
+              <WeeklyScreen
+                daily={forecast.weekly}
+                location={locationText}
+                loading={loading}
+              />
+            )}
+          </Tab.Screen>
+        </Tab.Navigator>
       </NavigationContainer>
-    </ImageBackground>
+    </View>
   );
 }
 
 export default function App() {
   return (
     <SafeAreaProvider>
-      <WeatherApp />
+      <LinearGradient
+        colors={['#0f2027', '#203a43', '#2c5364']}
+        style={styles.gradient}
+      >
+        <WeatherApp />
+      </LinearGradient>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  background: {
+  gradient: {
     flex: 1,
-    backgroundColor: '#09121f',
   },
 
-  backgroundImage: {
-    resizeMode: 'cover',
-  },
-
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(6, 14, 26, 0.34)',
-  },
-
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
 
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginHorizontal: 16,
-    marginTop: 10,
-    marginBottom: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 18,
-    backgroundColor: 'rgba(128, 19, 33, 0.74)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 210, 210, 0.16)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(180, 50, 50, 0.25)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 100, 100, 0.2)',
   },
 
-  errorText: {
+  error: {
     flex: 1,
-    color: '#fff2f2',
+    color: 'rgba(255, 200, 200, 0.9)',
     fontSize: 13,
-    lineHeight: 18,
-  },
-
-  errorGlyph: {
-    color: '#ffd2d2',
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-
-  tabIcon: {
-    fontSize: 18,
-    fontWeight: '700',
   },
 });

@@ -1,15 +1,41 @@
-import React from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ForecastChart from '../components/ForecastChart';
-import { getWeatherIconName } from '../services/api';
 
 const formatHour = (dateTime) => dateTime.split('T')[1]?.slice(0, 5) || dateTime;
+const formatHourShort = (dateTime) => dateTime.split('T')[1]?.slice(0, 2) + 'h' || '';
 
 export default function TodayScreen({ hourly, location, loading }) {
+  const chartData = useMemo(() => {
+    if (hourly.length < 2) return null;
+
+    const step = Math.max(1, Math.ceil(hourly.length / 8));
+    const sampled = hourly.filter((_, i) => i % step === 0);
+
+    return {
+      labels: sampled.map((h) => formatHourShort(h.time)),
+      datasets: [
+        {
+          data: sampled.map((h) => h.temperature),
+          color: (opacity = 1) => `rgba(100, 200, 255, ${opacity})`,
+          strokeWidth: 2.5,
+        },
+      ],
+    };
+  }, [hourly]);
+
   if (loading && hourly.length === 0) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#f7f9ff" />
+        <ActivityIndicator size="large" color="rgba(220, 235, 255, 0.9)" />
+        <Text style={styles.loadingText}>Fetching today's forecast...</Text>
       </View>
     );
   }
@@ -17,68 +43,72 @@ export default function TodayScreen({ hourly, location, loading }) {
   if (hourly.length === 0) {
     return (
       <View style={styles.centered}>
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>{"Today's weather is empty"}</Text>
-          <Text style={styles.emptyText}>
-            Search for a location to draw the temperature curve and hourly list.
-          </Text>
-        </View>
+        <MaterialCommunityIcons
+          name="calendar-today"
+          size={72}
+          color="rgba(220, 235, 255, 0.4)"
+        />
+        <Text style={styles.message}>
+          {"Search for a city to display today's hourly weather."}
+        </Text>
       </View>
     );
   }
 
+  const locationParts = location ? location.split(', ') : [];
+  const cityName = locationParts[0] || 'Unknown';
+  const regionCountry = locationParts.slice(1).join(', ');
+
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.headerCard}>
-        <Text style={styles.eyebrow}>Today</Text>
-        <Text style={styles.location}>{location || 'Unknown location'}</Text>
-        <Text style={styles.subtitle}>Hourly temperature curve and wind overview</Text>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <View style={styles.locationCard}>
+        <MaterialCommunityIcons name="map-marker" size={16} color="rgba(100, 180, 255, 0.9)" />
+        <View>
+          <Text style={styles.cityName}>{cityName}</Text>
+          {regionCountry ? (
+            <Text style={styles.regionCountry}>{regionCountry}</Text>
+          ) : null}
+        </View>
       </View>
 
-      <ForecastChart
-        title="Temperature Curve"
-        subtitle="Hours and temperatures for the current day"
-        data={hourly}
-        labelExtractor={(item) => formatHour(item.time)}
-        maxLabels={8}
-        pointSpacing={54}
-        series={[
-          {
-            key: 'temperature',
-            label: 'Temperature',
-            color: '#ffd166',
-            thickness: 3,
-          },
-        ]}
-      />
+      {chartData ? (
+        <ForecastChart
+          labels={chartData.labels}
+          datasets={chartData.datasets}
+          title="Temperature curve for today"
+        />
+      ) : null}
 
       <View style={styles.listCard}>
-        <Text style={styles.listTitle}>Hourly Breakdown</Text>
-
-        {hourly.map((hour) => (
-          <View key={hour.time} style={styles.row}>
+        {hourly.map((hour, index) => (
+          <View
+            key={hour.time}
+            style={[
+              styles.hourRow,
+              index === hourly.length - 1 && styles.hourRowLast,
+            ]}
+          >
             <Text style={styles.time}>{formatHour(hour.time)}</Text>
 
-            <View style={styles.weatherWrap}>
-              <View style={styles.iconShell}>
-                <Text style={styles.weatherGlyph}>
-                  {getWeatherIconName(hour.weatherCode)}
-                </Text>
-              </View>
-              <View style={styles.metaWrap}>
-                <Text style={styles.temperature}>
-                  {Math.round(hour.temperature)}
-                  {'\u00B0C'}
-                </Text>
-                <Text style={styles.description}>{hour.weatherDescription}</Text>
-              </View>
-            </View>
+            <MaterialCommunityIcons
+              name={hour.weatherIcon || 'weather-cloudy'}
+              size={26}
+              color="rgba(220, 235, 255, 0.9)"
+              style={styles.rowIcon}
+            />
 
-            <Text style={styles.wind}>{Math.round(hour.windSpeed)} km/h</Text>
+            <Text style={styles.temperature}>
+              {Math.round(hour.temperature)}°C
+            </Text>
+
+            <View style={styles.windCell}>
+              <MaterialCommunityIcons
+                name="weather-windy"
+                size={14}
+                color="rgba(190, 215, 240, 0.7)"
+              />
+              <Text style={styles.wind}>{hour.windSpeed} km/h</Text>
+            </View>
           </View>
         ))}
       </View>
@@ -89,153 +119,114 @@ export default function TodayScreen({ hourly, location, loading }) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
 
   content: {
-    paddingHorizontal: 18,
-    paddingBottom: 112,
-    gap: 16,
+    paddingTop: 14,
+    paddingBottom: 24,
   },
 
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingBottom: 104,
-    backgroundColor: 'transparent',
+    paddingHorizontal: 32,
+    gap: 16,
   },
 
-  headerCard: {
-    borderRadius: 28,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    backgroundColor: 'rgba(7, 18, 34, 0.68)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-
-  eyebrow: {
-    color: '#b7d8f6',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-
-  location: {
+  loadingText: {
+    color: 'rgba(220, 235, 255, 0.7)',
+    fontSize: 15,
     marginTop: 8,
-    color: '#f8fbff',
-    fontSize: 24,
-    fontFamily: 'serif',
   },
 
-  subtitle: {
-    marginTop: 6,
-    color: '#c5dbee',
-    fontSize: 14,
-    lineHeight: 20,
+  message: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: 'rgba(220, 235, 255, 0.7)',
+    lineHeight: 24,
+    marginTop: 12,
   },
 
-  listCard: {
-    borderRadius: 28,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-    backgroundColor: 'rgba(7, 18, 34, 0.72)',
+  locationCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
 
-  listTitle: {
-    color: '#f8fbff',
+  cityName: {
+    color: '#fff',
     fontSize: 18,
     fontWeight: '700',
   },
 
-  row: {
+  regionCountry: {
+    color: 'rgba(190, 215, 240, 0.75)',
+    fontSize: 13,
+    marginTop: 1,
+  },
+
+  listCard: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    overflow: 'hidden',
+  },
+
+  hourRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.07)',
+    gap: 10,
+  },
+
+  hourRowLast: {
+    borderBottomWidth: 0,
   },
 
   time: {
     width: 52,
-    color: '#d8e7f7',
+    fontWeight: '600',
+    color: 'rgba(190, 215, 240, 0.9)',
     fontSize: 14,
-    fontWeight: '700',
   },
 
-  weatherWrap: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 10,
-  },
-
-  iconShell: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 209, 102, 0.12)',
-  },
-
-  weatherGlyph: {
-    fontSize: 22,
-    textAlign: 'center',
-  },
-
-  metaWrap: {
-    flex: 1,
-    marginLeft: 12,
+  rowIcon: {
+    width: 32,
   },
 
   temperature: {
-    color: '#f8fbff',
+    flex: 1,
     fontSize: 16,
     fontWeight: '700',
+    color: '#fff',
   },
 
-  description: {
-    marginTop: 2,
-    color: '#bfd5ea',
-    fontSize: 13,
+  windCell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    width: 80,
+    justifyContent: 'flex-end',
   },
 
   wind: {
-    width: 72,
-    color: '#d8e7f7',
+    color: 'rgba(190, 215, 240, 0.8)',
     fontSize: 13,
-    textAlign: 'right',
-    fontWeight: '600',
-  },
-
-  emptyCard: {
-    width: '100%',
-    borderRadius: 28,
-    paddingHorizontal: 24,
-    paddingVertical: 28,
-    alignItems: 'center',
-    backgroundColor: 'rgba(7, 18, 34, 0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-
-  emptyTitle: {
-    color: '#f7fbff',
-    fontSize: 22,
-    fontFamily: 'serif',
-  },
-
-  emptyText: {
-    marginTop: 10,
-    color: '#c5dbee',
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center',
+    fontWeight: '500',
   },
 });

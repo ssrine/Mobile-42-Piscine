@@ -1,12 +1,13 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { getWeatherIconName } from '../services/api';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function CurrentScreen({ current, location, loading }) {
   if (loading && !current) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#f7f9ff" />
+        <ActivityIndicator size="large" color="rgba(220, 235, 255, 0.9)" />
+        <Text style={styles.loadingText}>Fetching weather...</Text>
       </View>
     );
   }
@@ -14,44 +15,54 @@ export default function CurrentScreen({ current, location, loading }) {
   if (!current) {
     return (
       <View style={styles.centered}>
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyGlyph}>☁</Text>
-          <Text style={styles.emptyTitle}>Waiting for weather data</Text>
-          <Text style={styles.emptyText}>
-            Search for a location or use GPS to display the current forecast.
-          </Text>
-        </View>
+        <MaterialCommunityIcons
+          name="weather-partly-cloudy"
+          size={72}
+          color="rgba(220, 235, 255, 0.4)"
+        />
+        <Text style={styles.message}>
+          Allow GPS access or search for a city to display the current weather.
+        </Text>
       </View>
     );
   }
 
+  const locationParts = location ? location.split(', ') : [];
+  const cityName = locationParts[0] || 'Unknown';
+  const regionCountry = locationParts.slice(1).join(', ');
+
   return (
     <View style={styles.screen}>
-      <View style={styles.heroCard}>
-        <Text style={styles.eyebrow}>Current Weather</Text>
-        <Text style={styles.location}>{location || 'Unknown location'}</Text>
-
-        <View style={styles.heroCenter}>
-          <View style={styles.iconBadge}>
-            <Text style={styles.weatherGlyph}>
-              {getWeatherIconName(current.weatherCode)}
-            </Text>
-          </View>
-
-          <View style={styles.tempWrap}>
-            <Text style={styles.temperature}>
-              {Math.round(current.temperature)}
-              {'\u00B0'}
-            </Text>
-            <Text style={styles.description}>{current.weatherDescription}</Text>
-          </View>
+      <View style={styles.locationCard}>
+        <MaterialCommunityIcons name="map-marker" size={18} color="rgba(100, 180, 255, 0.9)" />
+        <View style={styles.locationText}>
+          <Text style={styles.cityName}>{cityName}</Text>
+          {regionCountry ? (
+            <Text style={styles.regionCountry}>{regionCountry}</Text>
+          ) : null}
         </View>
+      </View>
 
-        <View style={styles.windPill}>
-          <Text style={styles.windGlyph}>➜</Text>
-          <Text style={styles.windText}>
-            Wind speed: {Math.round(current.windSpeed)} km/h
-          </Text>
+      <View style={styles.weatherCard}>
+        <MaterialCommunityIcons
+          name={current.weatherIcon || 'weather-cloudy'}
+          size={90}
+          color="rgba(255, 255, 255, 0.95)"
+          style={styles.weatherIcon}
+        />
+
+        <Text style={styles.temperature}>
+          {Math.round(current.temperature)}
+          <Text style={styles.tempUnit}>°C</Text>
+        </Text>
+
+        <Text style={styles.description}>{current.weatherDescription}</Text>
+
+        <View style={styles.divider} />
+
+        <View style={styles.windRow}>
+          <MaterialCommunityIcons name="weather-windy" size={22} color="rgba(220, 235, 255, 0.8)" />
+          <Text style={styles.windText}>{current.windSpeed} km/h</Text>
         </View>
       </View>
     </View>
@@ -61,139 +72,117 @@ export default function CurrentScreen({ current, location, loading }) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 18,
-    paddingBottom: 104,
-    backgroundColor: 'transparent',
+    paddingHorizontal: 20,
+    paddingVertical: 24,
   },
 
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingBottom: 104,
-    backgroundColor: 'transparent',
+    paddingHorizontal: 32,
+    gap: 16,
   },
 
-  heroCard: {
-    borderRadius: 34,
-    paddingHorizontal: 24,
-    paddingVertical: 28,
-    backgroundColor: 'rgba(7, 18, 34, 0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-
-  eyebrow: {
-    color: '#b7d8f6',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-    textAlign: 'center',
-  },
-
-  location: {
+  loadingText: {
+    color: 'rgba(220, 235, 255, 0.7)',
+    fontSize: 15,
     marginTop: 8,
-    color: '#f8fbff',
-    fontSize: 24,
-    fontFamily: 'serif',
+  },
+
+  message: {
     textAlign: 'center',
+    fontSize: 16,
+    color: 'rgba(220, 235, 255, 0.7)',
+    lineHeight: 24,
+    marginTop: 12,
   },
 
-  heroCenter: {
-    alignItems: 'center',
-    marginTop: 26,
-  },
-
-  iconBadge: {
-    width: 132,
-    height: 132,
-    borderRadius: 66,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 209, 102, 0.12)',
+  locationCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 209, 102, 0.28)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    marginBottom: 20,
+    alignSelf: 'stretch',
   },
 
-  weatherGlyph: {
-    fontSize: 66,
-    textAlign: 'center',
+  locationText: {
+    flex: 1,
   },
 
-  tempWrap: {
+  cityName: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+
+  regionCountry: {
+    color: 'rgba(190, 215, 240, 0.8)',
+    fontSize: 14,
+    marginTop: 2,
+  },
+
+  weatherCard: {
     alignItems: 'center',
-    marginTop: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 24,
+    paddingHorizontal: 40,
+    paddingVertical: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    alignSelf: 'stretch',
+  },
+
+  weatherIcon: {
+    marginBottom: 12,
   },
 
   temperature: {
-    color: '#f8fbff',
-    fontSize: 74,
-    lineHeight: 82,
-    fontWeight: '700',
+    fontSize: 76,
+    fontWeight: '200',
+    color: '#fff',
+    lineHeight: 80,
+  },
+
+  tempUnit: {
+    fontSize: 36,
+    fontWeight: '300',
+    color: 'rgba(220, 235, 255, 0.85)',
   },
 
   description: {
-    marginTop: 8,
-    color: '#d8ebff',
     fontSize: 20,
+    color: 'rgba(220, 235, 255, 0.9)',
+    marginTop: 8,
+    fontWeight: '400',
     textAlign: 'center',
   },
 
-  windPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 28,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    borderRadius: 18,
-    backgroundColor: 'rgba(157, 201, 255, 0.12)',
+  divider: {
+    width: '60%',
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    marginVertical: 20,
   },
 
-  windGlyph: {
-    color: '#9fd6ff',
-    fontSize: 22,
-    fontWeight: '700',
+  windRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 
   windText: {
-    color: '#f2f8ff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-
-  emptyCard: {
-    width: '100%',
-    borderRadius: 28,
-    paddingHorizontal: 24,
-    paddingVertical: 28,
-    alignItems: 'center',
-    backgroundColor: 'rgba(7, 18, 34, 0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-
-  emptyGlyph: {
-    fontSize: 42,
-    color: '#cfe5ff',
-  },
-
-  emptyTitle: {
-    marginTop: 14,
-    color: '#f7fbff',
-    fontSize: 22,
-    fontFamily: 'serif',
-  },
-
-  emptyText: {
-    marginTop: 10,
-    color: '#c5dbee',
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center',
+    fontSize: 18,
+    color: 'rgba(220, 235, 255, 0.85)',
+    fontWeight: '500',
   },
 });

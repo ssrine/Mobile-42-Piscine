@@ -1,25 +1,51 @@
-import React from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ForecastChart from '../components/ForecastChart';
-import { getWeatherIconName } from '../services/api';
 
 const formatDay = (date) =>
   new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
     weekday: 'short',
-  });
-
-const formatLongDay = (date) =>
-  new Date(`${date}T00:00:00`).toLocaleDateString('en-US', {
-    weekday: 'long',
     month: 'short',
     day: 'numeric',
   });
 
+const formatDayShort = (date) =>
+  new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short' });
+
 export default function WeeklyScreen({ daily, location, loading }) {
+  const chartData = useMemo(() => {
+    if (daily.length < 2) return null;
+
+    return {
+      labels: daily.map((d) => formatDayShort(d.date)),
+      datasets: [
+        {
+          data: daily.map((d) => d.minTemperature),
+          color: (opacity = 1) => `rgba(74, 195, 247, ${opacity})`,
+          strokeWidth: 2.5,
+        },
+        {
+          data: daily.map((d) => d.maxTemperature),
+          color: (opacity = 1) => `rgba(255, 112, 67, ${opacity})`,
+          strokeWidth: 2.5,
+        },
+      ],
+      legend: ['Min', 'Max'],
+    };
+  }, [daily]);
+
   if (loading && daily.length === 0) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#f7f9ff" />
+        <ActivityIndicator size="large" color="rgba(220, 235, 255, 0.9)" />
+        <Text style={styles.loadingText}>Fetching weekly forecast...</Text>
       </View>
     );
   }
@@ -27,77 +53,79 @@ export default function WeeklyScreen({ daily, location, loading }) {
   if (daily.length === 0) {
     return (
       <View style={styles.centered}>
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>Weekly weather is empty</Text>
-          <Text style={styles.emptyText}>
-            Search for a location to display the 7-day min and max curves.
-          </Text>
-        </View>
+        <MaterialCommunityIcons
+          name="calendar-week"
+          size={72}
+          color="rgba(220, 235, 255, 0.4)"
+        />
+        <Text style={styles.message}>
+          Search for a city to display the weekly forecast.
+        </Text>
       </View>
     );
   }
 
+  const locationParts = location ? location.split(', ') : [];
+  const cityName = locationParts[0] || 'Unknown';
+  const regionCountry = locationParts.slice(1).join(', ');
+
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.headerCard}>
-        <Text style={styles.eyebrow}>Weekly</Text>
-        <Text style={styles.location}>{location || 'Unknown location'}</Text>
-        <Text style={styles.subtitle}>
-          Minimum and maximum temperatures for the next seven days
-        </Text>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <View style={styles.locationCard}>
+        <MaterialCommunityIcons name="map-marker" size={16} color="rgba(100, 180, 255, 0.9)" />
+        <View>
+          <Text style={styles.cityName}>{cityName}</Text>
+          {regionCountry ? (
+            <Text style={styles.regionCountry}>{regionCountry}</Text>
+          ) : null}
+        </View>
       </View>
 
-      <ForecastChart
-        title="Weekly Curves"
-        subtitle="Min and max temperatures across the week"
-        data={daily}
-        labelExtractor={(item) => formatDay(item.date)}
-        maxLabels={7}
-        pointSpacing={74}
-        series={[
-          {
-            key: 'minTemperature',
-            label: 'Min',
-            color: '#8ce6c4',
-            thickness: 3,
-          },
-          {
-            key: 'maxTemperature',
-            label: 'Max',
-            color: '#ffd166',
-            thickness: 3,
-          },
-        ]}
-      />
+      {chartData ? (
+        <ForecastChart
+          labels={chartData.labels}
+          datasets={chartData.datasets}
+          title="Min / Max temperature for the week"
+          withLegend={chartData.legend}
+        />
+      ) : null}
+
+      <View style={styles.legendRow}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: 'rgba(74, 195, 247, 0.9)' }]} />
+          <Text style={styles.legendLabel}>Min temp</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: 'rgba(255, 112, 67, 0.9)' }]} />
+          <Text style={styles.legendLabel}>Max temp</Text>
+        </View>
+      </View>
 
       <View style={styles.listCard}>
-        <Text style={styles.listTitle}>7-Day Breakdown</Text>
+        {daily.map((day, index) => (
+          <View
+            key={day.date}
+            style={[
+              styles.dayRow,
+              index === daily.length - 1 && styles.dayRowLast,
+            ]}
+          >
+            <Text style={styles.dayName}>{formatDay(day.date)}</Text>
 
-        {daily.map((day) => (
-          <View key={day.date} style={styles.row}>
-            <View style={styles.dayBlock}>
-              <Text style={styles.dayName}>{formatLongDay(day.date)}</Text>
-              <Text style={styles.dayDescription}>{day.weatherDescription}</Text>
-            </View>
+            <MaterialCommunityIcons
+              name={day.weatherIcon || 'weather-cloudy'}
+              size={26}
+              color="rgba(220, 235, 255, 0.9)"
+              style={styles.rowIcon}
+            />
 
-            <View style={styles.iconShell}>
-              <Text style={styles.weatherGlyph}>
-                {getWeatherIconName(day.weatherCode)}
-              </Text>
-            </View>
-
-            <View style={styles.tempBlock}>
-              <Text style={styles.maxTemp}>
-                {Math.round(day.maxTemperature)}
-                {'\u00B0C'}
-              </Text>
+            <View style={styles.tempsCell}>
               <Text style={styles.minTemp}>
-                {Math.round(day.minTemperature)}
-                {'\u00B0C'}
+                {Math.round(day.minTemperature)}°
+              </Text>
+              <Text style={styles.tempSep}>/</Text>
+              <Text style={styles.maxTemp}>
+                {Math.round(day.maxTemperature)}°
               </Text>
             </View>
           </View>
@@ -110,150 +138,144 @@ export default function WeeklyScreen({ daily, location, loading }) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
 
   content: {
-    paddingHorizontal: 18,
-    paddingBottom: 112,
-    gap: 16,
+    paddingTop: 14,
+    paddingBottom: 24,
   },
 
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingBottom: 104,
-    backgroundColor: 'transparent',
+    paddingHorizontal: 32,
+    gap: 16,
   },
 
-  headerCard: {
-    borderRadius: 28,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    backgroundColor: 'rgba(7, 18, 34, 0.68)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-
-  eyebrow: {
-    color: '#b7d8f6',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-
-  location: {
+  loadingText: {
+    color: 'rgba(220, 235, 255, 0.7)',
+    fontSize: 15,
     marginTop: 8,
-    color: '#f8fbff',
-    fontSize: 24,
-    fontFamily: 'serif',
   },
 
-  subtitle: {
-    marginTop: 6,
-    color: '#c5dbee',
-    fontSize: 14,
-    lineHeight: 20,
+  message: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: 'rgba(220, 235, 255, 0.7)',
+    lineHeight: 24,
+    marginTop: 12,
   },
 
-  listCard: {
-    borderRadius: 28,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
-    backgroundColor: 'rgba(7, 18, 34, 0.72)',
+  locationCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
 
-  listTitle: {
-    color: '#f8fbff',
+  cityName: {
+    color: '#fff',
     fontSize: 18,
     fontWeight: '700',
   },
 
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  regionCountry: {
+    color: 'rgba(190, 215, 240, 0.75)',
+    fontSize: 13,
+    marginTop: 1,
   },
 
-  dayBlock: {
-    flex: 1,
-    paddingRight: 12,
+  legendRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 20,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+
+  legendLabel: {
+    color: 'rgba(190, 215, 240, 0.8)',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+
+  listCard: {
+    marginHorizontal: 16,
+    marginTop: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    overflow: 'hidden',
+  },
+
+  dayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.07)',
+    gap: 10,
+  },
+
+  dayRowLast: {
+    borderBottomWidth: 0,
   },
 
   dayName: {
-    color: '#f7fbff',
-    fontSize: 15,
-    fontWeight: '700',
+    flex: 1,
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
-  dayDescription: {
-    marginTop: 3,
-    color: '#bfd5ea',
-    fontSize: 13,
+  rowIcon: {
+    width: 32,
   },
 
-  iconShell: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+  tempsCell: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 209, 102, 0.12)',
-  },
-
-  weatherGlyph: {
-    fontSize: 22,
-    textAlign: 'center',
-  },
-
-  tempBlock: {
-    width: 72,
-    marginLeft: 12,
-    alignItems: 'flex-end',
-  },
-
-  maxTemp: {
-    color: '#ffe08a',
-    fontSize: 15,
-    fontWeight: '700',
+    gap: 4,
+    width: 90,
+    justifyContent: 'flex-end',
   },
 
   minTemp: {
-    marginTop: 4,
-    color: '#9de4ca',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  emptyCard: {
-    width: '100%',
-    borderRadius: 28,
-    paddingHorizontal: 24,
-    paddingVertical: 28,
-    alignItems: 'center',
-    backgroundColor: 'rgba(7, 18, 34, 0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-
-  emptyTitle: {
-    color: '#f7fbff',
-    fontSize: 22,
-    fontFamily: 'serif',
-  },
-
-  emptyText: {
-    marginTop: 10,
-    color: '#c5dbee',
+    color: 'rgba(74, 195, 247, 0.95)',
     fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center',
+    fontWeight: '600',
+  },
+
+  tempSep: {
+    color: 'rgba(220, 235, 255, 0.4)',
+    fontSize: 14,
+  },
+
+  maxTemp: {
+    color: 'rgba(255, 112, 67, 0.95)',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
