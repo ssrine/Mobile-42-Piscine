@@ -19,6 +19,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { signOut } from 'firebase/auth';
+import { Platform } from 'react-native';
 import { auth, db } from '../firebase';
 import DiaryEntryCard from '../components/DiaryEntryCard';
 
@@ -58,13 +59,15 @@ export default function ProfileScreen({ navigation, user }) {
   };
 
   const handleLogout = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to sign out?')) {
+        signOut(auth);
+      }
+      return;
+    }
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: () => signOut(auth),
-      },
+      { text: 'Sign Out', style: 'destructive', onPress: () => signOut(auth) },
     ]);
   };
 
@@ -87,7 +90,7 @@ export default function ProfileScreen({ navigation, user }) {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <View style={styles.userInfo}>
           <View style={styles.avatar}>

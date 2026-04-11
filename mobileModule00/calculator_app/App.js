@@ -1,223 +1,215 @@
-import { View, Text, TouchableOpacity, TextInput, SafeAreaView, Dimensions, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  SafeAreaView,
+  StatusBar,
+  useWindowDimensions,
+} from 'react-native';
 import { useState } from 'react';
 import Decimal from 'decimal.js';
 
 export default function App() {
   const [expression, setExpression] = useState('0');
   const [result, setResult] = useState('0');
-  const { width } = Dimensions.get('window');
 
-  const buttonSize = (width - 40) / 4;
-
-  const evaluateExpression = (expr) => {
-    try {
-      if (!expr || expr === '0') {
-        return '0';
-      }
-
-      if (/[+\-*/]$/.test(expr.trim()) || /^[+*/]/.test(expr.trim())) {
-        return '0';
-      }
-
-      let sanitized = expr.trim();
-
-      if (/[+\-*/]{2,}/.test(sanitized)) {
-        return '0';
-      }
-
-      sanitized = sanitized.replace(/^-/, '0-');
-
-      const tokens = sanitized.split(/([+\-*/])/);
-      for (let token of tokens) {
-        if (token && !/^[+\-*/]$/.test(token)) {
-          if ((token.match(/\./g) || []).length > 1) {
-            return '0';
-          }
-        }
-      }
-
-      // eslint-disable-next-line no-new-func
-      const func = new Function('return ' + sanitized);
-      const rawResult = func();
-
-      if (!isFinite(rawResult)) {
-        return '0';
-      }
-
-      if (Math.abs(rawResult) > 1e15) {
-        return rawResult.toExponential(6);
-      }
-
-      const decimalResult = new Decimal(rawResult);
-      const rounded = decimalResult.toDecimalPlaces(10).toString();
-
-      if (rounded.includes('.')) {
-        return rounded.replace(/\.?0+$/, '');
-      }
-
-      return rounded;
-    } catch (e) {
-      console.log('Error evaluating expression:', e.message);
-      return '0';
-    }
-  };
-
-  const handleButtonPress = (value) => {
-    console.log(value);
-
-    if (value === 'AC') {
-      setExpression('0');
-      setResult('0');
-    } else if (value === 'C') {
-      if (expression.length > 1) {
-        setExpression(expression.slice(0, -1));
-      } else {
-        setExpression('0');
-      }
-    } else if (value === '=') {
-      const calculatedResult = evaluateExpression(expression);
-      setResult(calculatedResult);
-      setExpression(calculatedResult);
-    } else if (['+', '-', '*', '/'].includes(value)) {
-      if (expression === '0' && value === '-') {
-        setExpression('-');
-      } else if (expression === '0') {
-        setExpression(value);
-      } else if (/[+\-*/]$/.test(expression)) {
-        setExpression(expression.slice(0, -1) + value);
-      } else {
-        setExpression(expression + value);
-      }
-    } else {
-      if (value === '.') {
-        const lastOperatorIndex = Math.max(
-          expression.lastIndexOf('+'),
-          expression.lastIndexOf('-'),
-          expression.lastIndexOf('*'),
-          expression.lastIndexOf('/')
-        );
-        const currentNumber = expression.substring(lastOperatorIndex + 1);
-        if (currentNumber.includes('.')) {
-          return;
-        }
-        setExpression(expression + value);
-      } else {
-        if (expression === '0' && value !== '0') {
-          setExpression(value);
-        } else if (expression === '0' && value === '0') {
-          return;
-        } else {
-          setExpression(expression + value);
-        }
-      }
-    }
-  };
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
 
   const buttons = [
     ['AC', 'C', '/', '*'],
     ['7', '8', '9', '-'],
     ['4', '5', '6', '+'],
     ['1', '2', '3', '='],
-    ['0', '.'],
+    ['0', '.', '', ''],
   ];
 
-  return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      {/* AppBar */}
-      <View style={{
-        backgroundColor: '#333',
-        paddingTop: 30,
-        paddingBottom: 30,
-        paddingHorizontal: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: 110,
-      }}>
-        <Text style={{ color: '#fff', fontSize: 32, fontWeight: 'bold' }}>
-          Calculator
-        </Text>
-      </View>
+  // Dynamic button sizing
+  const horizontalPadding = 20;
+  const verticalPadding = 20;
+  const buttonCols = 4;
+  const buttonRows = 5;
+  const bottomSpace = isLandscape ? 40 : 20;
 
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-        {/* Display Section */}
-        <View style={{ paddingHorizontal: 10, paddingVertical: 15 }}>
-          <Text style={{ fontSize: 12, color: '#666', marginBottom: 5 }}>
-            Expression
-          </Text>
+  const buttonWidth =
+    (width - horizontalPadding * 2 - 10 * (buttonCols - 1)) / buttonCols;
+  const buttonHeight =
+    (height * (isLandscape ? 0.65 : 0.5) -
+      verticalPadding * 2 -
+      10 * (buttonRows - 1) -
+      bottomSpace) /
+    buttonRows;
+
+  const fontSize = Math.min(buttonWidth, buttonHeight) / 2.5;
+  const displayFontSize = fontSize * 1.2;
+
+  // ---------------------------
+  // Calculator Logic
+  // ---------------------------
+  const evaluateExpression = (expr) => {
+    try {
+      if (!expr || expr === '0') return '0';
+      if (/[+\-*/]$/.test(expr) || /^[+*/]/.test(expr)) return '0';
+      if (/[+\-*/]{2,}/.test(expr)) return '0';
+
+      let sanitized = expr.replace(/^-/, '0-');
+      const parts = sanitized.split(/([+\-*/])/);
+      for (let p of parts) {
+        if (p && !/^[+\-*/]$/.test(p)) {
+          if ((p.match(/\./g) || []).length > 1) return '0';
+        }
+      }
+
+      if (/\/0+(\D|$)/.test(sanitized)) return '0';
+      const func = new Function('return ' + sanitized);
+      const raw = func();
+
+      if (!isFinite(raw)) return '0';
+      if (Math.abs(raw) > 1e15) return raw.toExponential(6);
+
+      const decimal = new Decimal(raw);
+      let rounded = decimal.toDecimalPlaces(10).toString();
+      if (rounded.includes('.')) rounded = rounded.replace(/\.?0+$/, '');
+      return rounded;
+    } catch {
+      return '0';
+    }
+  };
+
+  const handleButtonPress = (value) => {
+    console.log('Pressed:', value);
+
+    if (value === 'AC') {
+      setExpression('0');
+      setResult('0');
+      return;
+    }
+    if (value === 'C') {
+      setExpression(expression.length > 1 ? expression.slice(0, -1) : '0');
+      return;
+    }
+    if (value === '=') {
+      const res = evaluateExpression(expression);
+      setResult(res);
+      setExpression(res);
+      return;
+    }
+    if (['+', '-', '*', '/'].includes(value)) {
+      if (expression === '0' && value === '-') {
+        setExpression('-');
+        return;
+      }
+      if (/[+\-*/]$/.test(expression)) {
+        setExpression(expression.slice(0, -1) + value);
+      } else {
+        setExpression(expression + value);
+      }
+      return;
+    }
+    if (value === '.') {
+      const lastOp = Math.max(
+        expression.lastIndexOf('+'),
+        expression.lastIndexOf('-'),
+        expression.lastIndexOf('*'),
+        expression.lastIndexOf('/')
+      );
+      const current = expression.substring(lastOp + 1);
+      if (current.includes('.')) return;
+      setExpression(expression + value);
+      return;
+    }
+    if (expression === '0') setExpression(value);
+    else setExpression(expression + value);
+  };
+
+  // ---------------------------
+  // UI
+  // ---------------------------
+  return (
+    <View style={{ flex: 1, backgroundColor: '#2f3e46' }}>
+      <StatusBar barStyle="light-content" />
+
+      {/* AppBar */}
+      <SafeAreaView style={{ backgroundColor: '#344e41' }}>
+        <View style={{ paddingVertical: 15, alignItems: 'center' }}>
+          <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold' }}>Calculator</Text>
+        </View>
+      </SafeAreaView>
+
+      {/* Main */}
+      <View style={{ flex: 1, justifyContent: 'space-between', paddingHorizontal: horizontalPadding }}>
+        {/* Display */}
+        <View style={{ paddingVertical: 10 }}>
+          <Text style={{ color: '#aaa', fontSize: 16, textAlign: 'right' }}>Expression</Text>
           <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: '#ccc',
-              borderRadius: 4,
-              padding: 10,
-              fontSize: 16,
-              marginBottom: 15,
-              color: '#000',
-              backgroundColor: '#f9f9f9',
-            }}
             value={expression}
             editable={false}
+            style={{
+              color: '#fff',
+              fontSize: displayFontSize,
+              textAlign: 'right',
+              marginBottom: 10,
+            }}
           />
 
-          <Text style={{ fontSize: 12, color: '#666', marginBottom: 5 }}>
-            Result
-          </Text>
+          <Text style={{ color: '#aaa', fontSize: 16, textAlign: 'right' }}>Result</Text>
           <TextInput
-            style={{
-              borderWidth: 1,
-              borderColor: '#ccc',
-              borderRadius: 4,
-              padding: 10,
-              fontSize: 16,
-              marginBottom: 20,
-              color: '#000',
-              backgroundColor: '#f9f9f9',
-            }}
             value={result}
             editable={false}
+            style={{
+              color: '#fff',
+              fontSize: displayFontSize,
+              textAlign: 'right',
+            }}
           />
         </View>
 
-        {/* Buttons Grid */}
-        <ScrollView style={{ paddingHorizontal: 5 }} showsVerticalScrollIndicator={false}>
-          {buttons.map((row, rowIndex) => (
+        {/* Buttons */}
+        <View style={{ paddingBottom: bottomSpace }}>
+          {buttons.map((row, i) => (
             <View
-              key={rowIndex}
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'center',
-                marginBottom: 8,
-              }}
+              key={i}
+              style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}
             >
-              {row.map((btn) => {
-                let bgColor = '#3498db';
-                if (['AC', 'C'].includes(btn)) bgColor = '#e74c3c';
-                if (['/', '*', '+', '-', '='].includes(btn)) bgColor = '#f39c12';
+              {row.map((btn, j) => {
+                if (!btn) return <View key={j} style={{ width: buttonWidth, height: buttonHeight }} />;
+
+                let bg = '#84a98c';
+                let color = '#000';
+                if (['AC', 'C'].includes(btn)) {
+                  bg = '#e63946';
+                  color = '#fff';
+                }
+                if (['/', '*', '+', '-', '='].includes(btn)) {
+                  bg = '#f4a261';
+                  color = '#fff';
+                }
+
+                const widthBtn = btn === '0' ? buttonWidth * 2 + 10 : buttonWidth;
+                const borderRadius = btn === '0' ? 12 : 8;
 
                 return (
                   <TouchableOpacity
-                    key={btn}
+                    key={j}
                     onPress={() => handleButtonPress(btn)}
                     style={{
-                      width: btn === '0' ? buttonSize * 2 + 8 : buttonSize,
-                      height: buttonSize,
-                      backgroundColor: bgColor,
-                      borderRadius: 4,
+                      width: widthBtn,
+                      height: buttonHeight,
+                      backgroundColor: bg,
                       justifyContent: 'center',
                       alignItems: 'center',
-                      marginHorizontal: 4,
+                      borderRadius: borderRadius,
                     }}
                   >
-                    <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>
-                      {btn}
-                    </Text>
+                    <Text style={{ fontSize: fontSize, color, fontWeight: 'bold' }}>{btn}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
           ))}
-        </ScrollView>
-      </SafeAreaView>
+        </View>
+      </View>
     </View>
   );
 }

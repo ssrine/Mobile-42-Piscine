@@ -22,12 +22,14 @@ const Tab = createMaterialTopTabNavigator();
 const ScreenTemplate = ({ title, searchText, isGeolocation }) => {
   const displayText = isGeolocation
     ? 'Geolocation'
-    : searchText || '...';
+    : searchText || 'Enter location to search';
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>
-        {title} - {displayText}
+      <Text style={styles.title}>{title}</Text>
+
+      <Text style={styles.location}>
+        {displayText}
       </Text>
     </View>
   );
@@ -219,5 +221,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
+  },
+
+  location: {
+    fontSize: 16,
+    marginTop: 8,
+    color: '#555',
   },
 });

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Diary App",
-    "slug": "diary-app",
+    "name": "Advanced Diary",
+    "slug": "advanced-diary-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
